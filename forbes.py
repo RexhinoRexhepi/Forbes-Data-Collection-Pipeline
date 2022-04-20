@@ -1,8 +1,3 @@
-from asyncore import read
-from csv import reader
-from dataclasses import dataclass
-from http import client
-from tkinter.tix import Tree
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
@@ -11,8 +6,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from  webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.action_chains import ActionChains
-from bs4 import BeautifulSoup as bs
 import pandas as pd
 import requests
 import os
@@ -63,7 +56,7 @@ class Forbes_Scraper:
         }
     
         list_billioners = self.driver.find_elements(By.XPATH, xpath)
-        for billioners in list_billioners[0:10]:
+        for billioners in list_billioners:
             time.sleep(1)
             billioners.click()
             time.sleep(1)
@@ -84,7 +77,7 @@ class Forbes_Scraper:
             'link': []
         }
         
-        for link in self.billioners_link[0:10]:
+        for link in self.billioners_link:
             self.driver.get(link)
             time.sleep(1)
     
@@ -135,21 +128,32 @@ class Forbes_Scraper:
                 splitted_line = line.split(',')
                 # check if we have an image URL
                 if splitted_line[1] != '' and splitted_line[1] != "\n":
-                    my_path = os.makedirs('data', exist_ok=True)
-                    urllib.request.urlretrieve( splitted_line[1], f'data/{splitted_line[0] + ".png"}')
+                    my_path = os.makedirs('data/images', exist_ok=True)
+                    urllib.request.urlretrieve( splitted_line[1], f'data/images/{splitted_line[0] + ".png"}')
                     print("Image saved for {0}".format(splitted_line[0]))
                     i += 1
                 else:
                     print("No result for {0}".format(splitted_line[0]))
 
     def dump_data_to_aws(self):
-        path = "/home/rexhino/Web_Scraping_Project/Forbes-DataCollection-Pipeline/data"
+        path = "/home/rexhino/Web_Scraping_Project/Forbes-Data-Collection-Pipeline/data"
         os.chdir(path)
 
         s3 = boto3.client('s3')
         for my_file in os.listdir():
+            if '.csv' in my_file:
+                bucket = 'billioners-bucket'
+                file_key = 'Billioners_data' + str(my_file) 
+                s3.upload_file(my_file, bucket, file_key)
+            
+    def dumb_images_to_aws(self):
+        img_path = "/home/rexhino/Web_Scraping_Project/Forbes-Data-Collection-Pipeline/data/images"
+        os.chdir(img_path)
+
+        s3 = boto3.client('s3')
+        for my_file in os.listdir():
             bucket = 'billioners-bucket'
-            file_key = 'Top10_billioner&images/' + str(my_file) 
+            file_key = 'Billioners_Images' + str(my_file) 
             s3.upload_file(my_file, bucket, file_key)
 
         self.driver.quit()
@@ -164,3 +168,4 @@ if __name__ == '__main__':
     bot.save_img_data()
     bot.pull_img()
     bot.dump_data_to_aws()
+    bot.dumb_images_to_aws()
