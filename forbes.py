@@ -1,3 +1,4 @@
+from tkinter import N
 from numpy import number
 from selenium import webdriver
 from selenium.webdriver import Chrome
@@ -49,6 +50,7 @@ class Forbes_Scraper:
             self.driver.find_element(By.XPATH, xpath).click()
         except TimeoutException:
             print('No cookies found')
+        return None
     
     def close_first_option(self, xpath: str = '(//div[@class="table-row-group__container"]/div)[1]'):
         '''
@@ -58,8 +60,9 @@ class Forbes_Scraper:
         open_element = self.driver.find_element(By.XPATH, xpath)
         open_element.location_once_scrolled_into_view
         open_element.click()
+        return None
 
-    def get_links(self, num: int = 10 , xpath: str = '//div[@class="table-row-group__container"]/div'):
+    def get_links(self, num, xpath: str = '//div[@class="table-row-group__container"]/div'):
         '''
         Declare and empty list and then for each of billioners we click we get the link and store it
         '''
@@ -190,16 +193,27 @@ class Forbes_Scraper:
             file_key = 'Billioners_Images/' + str(my_file) 
             s3.upload_file(my_file, bucket, file_key)
 
+    def run_scraper(self,num):
+        self.accept_cookies()
+        print("accepting cookies")
+        self.close_first_option()
+        self.get_links(num)
+        print("getting the profile links...")
+        self.get_billioners_data()
+        print("getting the data")
+        self.save_billioners_data()
+        print("saving the data")
+        self.save_img_data()
+        self.pull_img()
+        print("saving images")
+        self.dump_data_to_aws()
+        self.dumb_images_to_aws()
+        print("dumping data & images on a S3 bucket")
+
+    def quit_scraper(self):
         self.driver.quit()
                 
 if __name__ == '__main__':
-    bot = Forbes_Scraper()
-    bot.accept_cookies()
-    bot.close_first_option()
-    bot.get_links()
-    bot.get_billioners_data()
-    bot.save_billioners_data()
-    bot.save_img_data()
-    bot.pull_img()
-    # bot.dump_data_to_aws()
-    # bot.dumb_images_to_aws()
+    forbes = Forbes_Scraper()
+    forbes.run_scraper()
+    forbes.quit_scraper()
