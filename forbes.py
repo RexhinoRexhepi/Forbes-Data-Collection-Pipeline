@@ -1,3 +1,5 @@
+from numpy import number
+from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
@@ -22,7 +24,19 @@ class Forbes_Scraper:
         '''
         Initializing the web browser and getting the url indicated
         '''
-        self.driver = Chrome(ChromeDriverManager().install())
+        """
+        Sets chrome options for Selenium.
+        Chrome options for headless browser is enabled.
+        """
+        chrome_options = webdriver.ChromeOptions()
+        user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
+        chrome_options.add_argument(f'user-agent={user_agent}')
+        chrome_options.add_argument("--window-size=1920x1080")
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.headless = True
+    
+        self.driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
         self.driver.maximize_window()
         self.driver.get(url)
 
@@ -45,7 +59,7 @@ class Forbes_Scraper:
         open_element.location_once_scrolled_into_view
         open_element.click()
 
-    def get_links(self, xpath: str = '(//div[@class="table-row-group__container"])[1]/div'):
+    def get_links(self, num: int = 10 , xpath: str = '//div[@class="table-row-group__container"]/div'):
         '''
         Declare and empty list and then for each of billioners we click we get the link and store it
         '''
@@ -54,16 +68,26 @@ class Forbes_Scraper:
             'name': [],
             'img_link': []
         }
-    
+        self.num = num
+        
         list_billioners = self.driver.find_elements(By.XPATH, xpath)
-        for billioners in list_billioners:
+        for billioners in list_billioners[0:num]:
             time.sleep(1)
             billioners.click()
             time.sleep(1)
-
-            self.billioners_link.append(self.driver.find_element(By.XPATH, '//div[@class="table-row-group"][1]/div[@class!="left-rail"]//a').get_attribute('href'))
-            self.billioners_img['img_link'].append(self.driver.find_element(By.XPATH, '//div[@class="avatar"]/img').get_attribute('src'))
-            self.billioners_img['name'].append(self.driver.find_element(By.XPATH, '//div[@class="avatar"]/img').get_attribute('alt'))
+            
+            try:
+                self.billioners_link.append(self.driver.find_element(By.XPATH, '//div[@class="table-row-group"]/div[@class!="left-rail"]//a [@class="bio-button"]').get_attribute('href'))
+            except TimeoutException:
+                print("No link found!")
+            try:
+                self.billioners_img['img_link'].append(self.driver.find_element(By.XPATH, '//div[@class="avatar"]/img').get_attribute('src'))
+            except TimeoutException:
+                print("No image link found!")
+            try:
+                self.billioners_img['name'].append(self.driver.find_element(By.XPATH, '//div[@class="avatar"]/img').get_attribute('alt'))
+            except TimeoutException:
+                print("No image name found!")
 
     def get_billioners_data(self):
         '''Get the billioners data throgh the dictionary with empty lists'''
@@ -79,28 +103,38 @@ class Forbes_Scraper:
         
         for link in self.billioners_link:
             self.driver.get(link)
-            time.sleep(1)
+            time.sleep(2)
     
             self.billioners_data['link'].append(link)
             self.billioners_data["uuid"].append(str(uuid.uuid4()))
 
             
             # WebDriverWait(self.driver, 20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH, '//iframe[@id="mnet"]')))
-
-            rank = self.driver.find_element(By.CLASS_NAME, "list-name--rank")
-            self.billioners_data['rank'].append(rank.text)
-
-            full_name = self.driver.find_element(By.XPATH, '//div[@class="listuser-header__name"]').text
-            self.billioners_data['full_name'].append(full_name)
-
-            age = self.driver.find_element(By.XPATH, '(//span[@class="profile-stats__text"])[1]')
-            self.billioners_data['age'].append(age.text)
-
-            net_worth = self.driver.find_element(By.XPATH, '//div[@class="profile-info__item-value"]')
-            self.billioners_data['net_worth'].append(net_worth.text)
-
-            source = self.driver.find_element(By.XPATH, '(//span[@class="profile-stats__text"])[2]')
-            self.billioners_data['source'].append(source.text)
+            try:
+                rank = self.driver.find_element(By.XPATH, '//span[@class="list-name--rank"]')
+                self.billioners_data['rank'].append(rank.text)
+            except TimeoutException:
+                print("no rank found!")
+            try:
+                full_name = self.driver.find_element(By.XPATH, '//div[@class="listuser-header__name"]').text
+                self.billioners_data['full_name'].append(full_name)
+            except TimeoutException:
+                print("No name found!")
+            try:
+                age = self.driver.find_element(By.XPATH, '(//span[@class="profile-stats__text"])[1]')
+                self.billioners_data['age'].append(age.text)
+            except TimeoutException:
+                print("No age found!")
+            try:
+                net_worth = self.driver.find_element(By.XPATH, '//div[@class="profile-info__item-value"]')
+                self.billioners_data['net_worth'].append(net_worth.text)
+            except TimeoutException:
+                print("No net worth found!")
+            try:
+                source = self.driver.find_element(By.XPATH, '(//span[@class="profile-stats__text"])[3]')
+                self.billioners_data['source'].append(source.text)
+            except TimeoutException:
+                print("No source found!")
 
     def save_billioners_data(self):
         '''
@@ -143,7 +177,7 @@ class Forbes_Scraper:
         for my_file in os.listdir():
             if '.csv' in my_file:
                 bucket = 'billioners-bucket'
-                file_key = 'Billioners_data' + str(my_file) 
+                file_key = 'Billioners_data/' + str(my_file) 
                 s3.upload_file(my_file, bucket, file_key)
             
     def dumb_images_to_aws(self):
@@ -153,7 +187,7 @@ class Forbes_Scraper:
         s3 = boto3.client('s3')
         for my_file in os.listdir():
             bucket = 'billioners-bucket'
-            file_key = 'Billioners_Images' + str(my_file) 
+            file_key = 'Billioners_Images/' + str(my_file) 
             s3.upload_file(my_file, bucket, file_key)
 
         self.driver.quit()
@@ -167,5 +201,5 @@ if __name__ == '__main__':
     bot.save_billioners_data()
     bot.save_img_data()
     bot.pull_img()
-    bot.dump_data_to_aws()
-    bot.dumb_images_to_aws()
+    # bot.dump_data_to_aws()
+    # bot.dumb_images_to_aws()

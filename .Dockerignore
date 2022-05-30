@@ -1,0 +1,5 @@
+forbes.py
+dist
+__pychache__
+.mypy_cache
+.gitignore
