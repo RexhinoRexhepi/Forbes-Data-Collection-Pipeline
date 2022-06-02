@@ -1,16 +1,28 @@
-FROM python:3.8
+FROM python:3.9.5
 
-RUN \
-    #adds keys to apt for repositories
-    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \ 
-    #adds google chrome
-    &&  sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' \
-    && apt-get -y update && apt-get install -y google-chrome-stable \
-    #downloads chromedriver
-    && wget -O /tmp/chromedriver.zip http://chromedriver.storage.googleapis.com/`curl -sS \
-        chromedriver.storage.googleapis.com/LATEST_RELEASE`/chromedriver_linux64.zip \
-    && apt-get install -yqq unzip \
-    && unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
-COPY . . 
-RUN pip install -r requirements.txt
-ENTRYPOINT forbes.py
+# install system dependencies
+RUN apt-get update \
+    && apt-get -y install gcc make \
+    && rm -rf /var/lib/apt/lists/*s
+
+# install google chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+RUN apt-get -y update
+RUN apt-get install -y google-chrome-stable
+
+# install chromedriver
+RUN apt-get install -yqq unzip
+RUN wget -O /tmp/chromedriver.zip http://chromedriver.storage.googleapis.com/`curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE`/chromedriver_linux64.zip
+RUN unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
+
+RUN python3 --version
+RUN pip3 --version
+RUN pip install --no-cache-dir --upgrade pip
+
+COPY  . .
+COPY  requirements.txt .
+
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+CMD [ "python3", "forbes_scraper.py" ]

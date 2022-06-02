@@ -35,6 +35,8 @@ class Forbes_Scraper:
         chrome_options.add_argument("--window-size=1920x1080")
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument("--disable-setuid-sandbox")
+        chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.headless = True
     
         self.driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
@@ -206,9 +208,9 @@ class Forbes_Scraper:
         self.save_img_data()
         self.pull_img()
         print("saving images")
-        self.dump_data_to_aws()
-        self.dumb_images_to_aws()
-        print("dumping data & images on a S3 bucket")
+        # self.dump_data_to_aws()
+        # self.dumb_images_to_aws()
+        # print("dumping data & images on a S3 bucket")
 
     def quit_scraper(self):
         self.driver.quit()
