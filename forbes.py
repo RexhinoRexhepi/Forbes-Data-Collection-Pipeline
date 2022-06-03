@@ -208,9 +208,9 @@ class Forbes_Scraper:
         self.save_img_data()
         self.pull_img()
         print("saving images")
-        # self.dump_data_to_aws()
-        # self.dumb_images_to_aws()
-        # print("dumping data & images on a S3 bucket")
+        self.dump_data_to_aws()
+        self.dumb_images_to_aws()
+        print("dumping data & images on a S3 bucket")
 
     def quit_scraper(self):
         self.driver.quit()
