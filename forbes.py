@@ -25,6 +25,11 @@ class Forbes_Scraper:
         '''
         Initializing the web browser and getting the url indicated
         '''
+    
+        self.driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
+        self.driver.maximize_window()
+        self.driver.get(url)
+
         """
         Sets chrome options for Selenium.
         Chrome options for headless browser is enabled.
@@ -38,10 +43,6 @@ class Forbes_Scraper:
         chrome_options.add_argument("--disable-setuid-sandbox")
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.headless = True
-    
-        self.driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
-        self.driver.maximize_window()
-        self.driver.get(url)
 
     def accept_cookies(self, xpath: str = '//button[@class="trustarc-agree-btn"]'):
         '''
